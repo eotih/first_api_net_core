@@ -1,5 +1,6 @@
 using First_Api.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace First_Api.Controllers
 {
@@ -7,35 +8,89 @@ namespace First_Api.Controllers
     [Route("[controller]")]
     public class InforController : ControllerBase
     {
-        Bai1Context context = new Bai1Context();
-        [HttpGet]
-        public IEnumerable<Infor> Get()
+        private readonly Bai1Context _context;
+
+        public InforController(Bai1Context context)
         {
-            return context.Infors.ToList();
+            _context = context;
         }
-        
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<Infor>>> GetInfor()
+        {
+            return await _context.Infors.ToListAsync();
+        }
+        // GET: api/Infor/5
+        [HttpGet("{id}")]
+        public async Task<ActionResult<Infor>> GetEmployee(int id)
+        {
+            var obj = await _context.Infors.FindAsync(id);
+
+            if (obj == null)
+            {
+                return NotFound();
+            }
+
+            return obj;
+        }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutEmployee(int id, Infor infor)
+        {
+            if (id != infor.Id)
+            {
+                return BadRequest();
+            }
+
+            _context.Entry(infor).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!InforExists(id))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return NoContent();
+        }
+
         [HttpPost]
-        public Response Post(Infor infor)
+        public async Task<ActionResult<Infor>> PostInfor(Infor infor)
         {
             if (infor is null)
             {
                 throw new ArgumentNullException(nameof(infor));
             }
-            Infor infor1 = new()
+            _context.Infors.Add(infor);
+            await _context.SaveChangesAsync();
+            return CreatedAtAction("GetInfor", new { id = infor.Id }, infor);
+
+        }
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<Infor>> Delete(int id)
+        {
+            var infor = await _context.Infors.FindAsync(id);
+            if (infor == null)
             {
-                Name = infor.Name,
-                Phone = infor.Phone,
-                Email = infor.Email,
-                Age = infor.Age
-            };
-            context.Infors.Add(infor1);
-            context.SaveChanges();
-            return new Response
-            {
-                Status = 201,
-                Message = infor
-            };
-            
+                return NotFound();
+            }
+
+            _context.Infors.Remove(infor);
+            await _context.SaveChangesAsync();
+
+            return infor;
+        }
+
+        private bool InforExists(int id)
+        {
+            return _context.Infors.Any(e => e.Id == id);
         }
     }
 }
